@@ -42,7 +42,7 @@ def main():
 
         for index, row in course.iterrows():
 
-            if mode_dict[int(testmode)] == 'week' and row['COURSE CODE'] in courses_added.values():
+            if mode_dict[int(testmode)] == 'week' and (row['COURSE CODE'] + ' ' + row['CLASS SECTION']) in courses_added.values():
                 continue
 
             if add_sections == 'y' or row['CLASS SECTION'] in add_sections.upper().split(','):
@@ -85,12 +85,13 @@ def main():
                 }
                 if mode_dict[int(testmode)] == 'semester':
                     event['recurrence'] = [f'RRULE:FREQ=WEEKLY;UNTIL={(int(str(end_date).replace('-',''))+1)};BYDAY={[day[:2] for day in day_index.keys() if pd.notnull(row[day])][0]}',]
-                
+
                 # Insert event to calendar
+                print(f"Adding {row['COURSE CODE']} {row['CLASS SECTION']} from {start_date} to {end_date if mode_dict[int(testmode)] == 'semester' else start_date} to your google calendar...")
                 event = service.events().insert(calendarId='primary', body=event).execute()
 
-                if mode_dict[int(testmode)] == 'week':
-                    courses_added[event['id']] = row['COURSE CODE'] + ' ' + row['CLASS SECTION']
+                courses_added[event['id']] = row['COURSE CODE'] + ' ' + row['CLASS SECTION']
+        
 
 
     creds = None
@@ -107,41 +108,6 @@ def main():
     try:
         service = build('calendar', 'v3', credentials=creds)
 
-        # title = 'COMP7506'
-        # description = 'Lecture'
-        # start_date = '2024-09-01'
-        # start_time = '09:00:00'
-        # end_time = '11:00:00'
-        # section = 'L1'
-        # add_section_title = 'y'
-        
-        # event = {
-        #     'summary': f'{title} {section if add_section_title[0].lower() == 'y' else ''}',
-        #     'description': f'{description}',
-        #     'start': {
-        #         'dateTime': f'{start_date}T{start_time}+08:00',
-        #         'timeZone': 'Asia/Hong_Kong',
-        #     },
-        #     # default color is blue
-        #     'colorId': 7,
-        #     'end': {
-        #         'dateTime': f'{start_date}T{end_time}+08:00',
-        #         'timeZone': 'Asia/Hong_Kong',
-        #     },
-        #     'recurrence': [
-        #          RRULE:FREQ=WEEKLY;UNTIL=2024-09-11;BYDAY=WE
-        #         'RRULE:FREQ=WEEKLY;UNTIL=20240930;BYDAY=MO',
-        #     ],
-        #     'reminders': {
-        #         'useDefault': False,
-        #         'overrides': [
-        #         ],
-        #     },
-        # }
-
-        # # Insert event to calendar
-        # event = service.events().insert(calendarId='primary', body=event).execute()
-    
         # main program  
         print("Welcome to HKU Course Planner!")
 
@@ -164,12 +130,12 @@ def main():
                 while not mode.isdigit() or int(mode) not in range(1, 4):
                     mode = input("\n1. One week\n2. Whole semester\n3. Go back\nInvalid input. Please select an option again: ")
 
+                if mode == '1':
+                    print("In this mode, the semester 1 courses will be added to the nearest next week, and the semester 2 courses will be added to the week after the semester 1 courses.")
                 if mode == '3':
-                    break
+                    break                
 
                 while mode != '3':
-                    if mode == '1':
-                        print("In this week, the semester 1 courses will be added to the nearest next week, and the semester 2 courses will be added to the week after the semester 1 courses.")
 
                     semester = input("\n1. Sem 1\n2. Sem 2\n3. Go back\nPlease enter the semester: ")
                     while not semester.isdigit() or int(semester) not in range(1, 4):
@@ -216,6 +182,16 @@ def main():
                                 add_more = input("Invalid input. Please enter y or n: ")
                             if add_more[0].lower() == 'n':
                                 break
+                    if len(courses_added) > 0:
+                        clear = input("Do you want to clear all the entered events? (y/n) ")
+                        while clear[0].lower() not in ['y', 'n']:
+                            clear = input("Invalid input. Please enter y or n: ")
+
+                        if clear[0].lower() == 'y':
+                            for course_id in courses_added.keys():
+                                print(f"Deleting {course_id} {courses_added[course_id]} from your google calendar...")
+                                service.events().delete(calendarId='primary', eventId=course_id).execute()
+                            courses_added.clear()
 
         print("Thank you for using HKU Course Planner!")
     except HttpError as e:
