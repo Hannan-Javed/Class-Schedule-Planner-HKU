@@ -1,7 +1,7 @@
 # HKU Course Planner
 This Python script helps HKU students add their courses to their Google Calendar. It reads course information from an Excel file and allows users to search for courses by code or title, then add them to their calendar.
 ## Features
-- **Course Import**: Reads course information from an Excel file (currently 2024-25_class_timetable_20240722.xlsx, can be changed in global variables).
+- **Course Import**: Reads course information from an Excel file (currently 2024-25_class_timetable_20240722.xlsx).
 - **Degree Selection**: Allows users to choose their degree program (UG, TPG, RPG).
 - **Semester Selection**: Allows users to choose the semester (Sem 1 or Sem 2).
 - **Course Search**: Searches for courses by code or title.
@@ -19,6 +19,8 @@ This Python script helps HKU students add their courses to their Google Calendar
 You can also refer to the guideline here for Google project setup:<br>
 https://www.youtube.com/watch?v=B2E82UPUnOY&t=463s
 ## Usage
-Run `main.py` to launch the program.
+Run `main.py` to launch the program.<br>
+
+**Note:** The excel file should be downloaded in the current directory before running the script.
 
 
