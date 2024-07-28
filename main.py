@@ -1,5 +1,6 @@
 import pandas as pd
 import datetime as dt
+from datetime import timedelta
 import os.path, re
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -12,51 +13,85 @@ excel_file = '2024-25_class_timetable_20240722.xlsx'
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 pd.set_option('display.max_columns', None)
 degree_dict = {1: 'UG', 2: 'TPG', 3: 'RPG'}
+mode_dict = {1: 'week', 2: 'semester'}
 semester_dict = {1: 'Sem 1', 2: 'Sem 2'}
 search_mode_dict = {1: 'COURSE CODE', 2: 'COURSE TITLE'}
+courses_added = {}
+day_index = {'MON': 0, 'TUE': 1, 'WED': 2, 'THU': 3, 'FRI': 4}
 
 
 def main():
 
-    def addToCalender(course):
+    def addToCalender(course, testmode):
+
+
+        if course['CLASS SECTION'].nunique() > 1:
+            add_sections = input("There are more than one section available for the chosen courses in this semester. Do you want to add all sections of the course? (y/n) ")
+            while add_sections[0].lower() not in ['y', 'n']:
+                add_sections = input("Invalid input. Please enter y or n: ")
+            if add_sections[0].lower() == 'n':
+                add_sections = input(f"{','.join(course['CLASS SECTION'].unique())}\nPlease enter the section(s) you want to add. If more than one section, then seperate with comma: ").upper()
+                while not all(section in course['CLASS SECTION'].unique() for section in add_sections.split(',')):
+                    add_sections = input(f"{','.join(course['CLASS SECTION'].unique())}\nInvalid section. Please enter a valid section: ").upper()
+        else:
+            add_sections = 'y'
+        
+        add_section_title = input("Do you want to add the section title together with the course title? (y/n) ")
+        while add_section_title[0].lower() not in ['y', 'n']:
+            add_section_title = input("Invalid input. Please enter y or n: ")
 
         for index, row in course.iterrows():
 
-            start_date = row['START DATE'].date()
-            end_date = row['END DATE'].date()
-            start_time = row['START TIME']
-            end_time = row['END TIME']
-            title = row['COURSE TITLE']
-            description = row['VENUE']
-            section = row['CLASS SECTION']
+            if mode_dict[int(testmode)] == 'week' and row['COURSE CODE'] in courses_added.values():
+                continue
 
-            event = {
-                'summary': f'{title} {section}',
-                'description': f'{description}',
-                'start': {
-                    'dateTime': f'{start_date}T{start_time}+08:00',
-                    'timeZone': 'Asia/Hong_Kong',
-                },
-                'colorId': 7,
-                'end': {
-                    'dateTime': f'{start_date}T{end_time}+08:00',
-                    'timeZone': 'Asia/Hong_Kong',
-                },
-                'reminders': {
-                    'useDefault': False,
-                    'overrides': [
-                    ],
-                },
+            if add_sections == 'y' or row['CLASS SECTION'] in add_sections.upper().split(','):
+
+                start_date = row['START DATE'].date()
+                end_date = row['END DATE'].date()
+                start_time = row['START TIME']
+                end_time = row['END TIME']
+                title = row['COURSE TITLE']
+                description = row['VENUE']
+                section = row['CLASS SECTION']
+
+                if mode_dict[int(testmode)] == 'week':
+                    today = pd.Timestamp('today').date()
+                    if 'Sem 1' in row['ERM']:
+                        start_date = today + timedelta(days=(7 - today.weekday()))  # Next Monday
+                    elif 'Sem 2' in row['ERM']:
+                        start_date = today + timedelta(days=(14 - today.weekday()))  # Monday after next
+
+                    start_date = start_date + timedelta(days=[day_index[row[day]] for day in day_index.keys() if pd.notnull(row[day])][0])
+                    
+                event = {
+                    'summary': f'{title} {section if add_section_title[0].lower() == 'y' else ''}',
+                    'description': f'{description}',
+                    'start': {
+                        'dateTime': f'{start_date}T{start_time}+08:00',
+                        'timeZone': 'Asia/Hong_Kong',
+                    },
+                    # default color is blue
+                    'colorId': 7,
+                    'end': {
+                        'dateTime': f'{start_date}T{end_time}+08:00',
+                        'timeZone': 'Asia/Hong_Kong',
+                    },
+                    'reminders': {
+                        'useDefault': False,
+                        'overrides': [
+                        ],
+                    },
+                }
+                if mode_dict[int(testmode)] == 'semester':
+                    event['recurrence'] = [f'RRULE:FREQ=WEEKLY;UNTIL={(int(str(end_date).replace('-',''))+1)};BYDAY={[day[:2] for day in day_index.keys() if pd.notnull(row[day])][0]}',]
                 
-            }
-            if mode == 'semester':
-                days = ','.join([day[:2] for day in ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] if pd.notnull(row[day])])
-                event['recurrence'] = [f'RRULE:FREQ=WEEKLY;UNTIL={end_date};BYDAY={days}',]
-            else:
-                break
-        
-            # Insert event to calendar
-            event = service.events().insert(calendarId='primary', body=event).execute()
+                # Insert event to calendar
+                event = service.events().insert(calendarId='primary', body=event).execute()
+
+                if mode_dict[int(testmode)] == 'week':
+                    courses_added[event['id']] = row['COURSE CODE'] + ' ' + row['CLASS SECTION']
+
 
     creds = None
     if os.path.exists('token.json'):
@@ -72,6 +107,40 @@ def main():
     try:
         service = build('calendar', 'v3', credentials=creds)
 
+        # title = 'COMP7506'
+        # description = 'Lecture'
+        # start_date = '2024-09-01'
+        # start_time = '09:00:00'
+        # end_time = '11:00:00'
+        # section = 'L1'
+        # add_section_title = 'y'
+        
+        # event = {
+        #     'summary': f'{title} {section if add_section_title[0].lower() == 'y' else ''}',
+        #     'description': f'{description}',
+        #     'start': {
+        #         'dateTime': f'{start_date}T{start_time}+08:00',
+        #         'timeZone': 'Asia/Hong_Kong',
+        #     },
+        #     # default color is blue
+        #     'colorId': 7,
+        #     'end': {
+        #         'dateTime': f'{start_date}T{end_time}+08:00',
+        #         'timeZone': 'Asia/Hong_Kong',
+        #     },
+        #     'recurrence': [
+        #          RRULE:FREQ=WEEKLY;UNTIL=2024-09-11;BYDAY=WE
+        #         'RRULE:FREQ=WEEKLY;UNTIL=20240930;BYDAY=MO',
+        #     ],
+        #     'reminders': {
+        #         'useDefault': False,
+        #         'overrides': [
+        #         ],
+        #     },
+        # }
+
+        # # Insert event to calendar
+        # event = service.events().insert(calendarId='primary', body=event).execute()
     
         # main program  
         print("Welcome to HKU Course Planner!")
@@ -123,7 +192,6 @@ def main():
                         while search_mode != '3' and search != '-1':
                             search = input(f"Please enter the {search_mode_dict[int(search_mode)].lower()}: (-1 to go back) ")
                             
-
                             while search_mode == '1' and not re.match("[a-zA-Z]{4}[0-9]{4}", search) and search != '-1':
                                 search = input(f"Invalid course code format. Please enter the {search_mode_dict[int(search_mode)].lower()} again: (format is XXXXDDDD) ")
 
@@ -141,9 +209,9 @@ def main():
                                     addcourse = input("Invalid input. Please enter y or n: ")
 
                                 if addcourse[0].lower() == 'y':
-                                    addToCalender(search_result)
+                                    addToCalender(search_result, mode)
 
-                            add_more = input("Do you want to search for more courses? (y/n) ")
+                            add_more = input(f"Do you want to search for more courses by {search_mode_dict[int(search_mode)].lower()}? (y/n) ")
                             while add_more[0].lower() not in ['y', 'n']:
                                 add_more = input("Invalid input. Please enter y or n: ")
                             if add_more[0].lower() == 'n':
