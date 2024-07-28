@@ -7,6 +7,7 @@ This Python script helps HKU students add their courses to their Google Calendar
 - **Course Search**: Searches for courses by code or title.
 - **Calendar Integration**: Adds selected courses to the user's Google Calendar.
 - **Recurrence Options**: Allows users to choose between adding courses for one week (e.g. for seeing clashes) or the whole semester.
+- **Deletion**: Allow users to delete all entered courses in their google calendar.
 ## Installation
 1. Install the required packages:<br>
 `pip install -r requirements.txt`
@@ -14,6 +15,10 @@ This Python script helps HKU students add their courses to their Google Calendar
 3. Create API credentials (OAuth 2.0 client ID) for your project.
 4. Download the credentials.json file and place it in the same directory as the Python script.
 5. Run the script. It will guide you through the authentication process and create a token.json file to store your authentication credentials.
+
+You can also refer to the guideline here for Google project setup:<br>
+https://www.youtube.com/watch?v=B2E82UPUnOY&t=463s
 ## Usage
 Run `main.py` to launch the program.
+
 
