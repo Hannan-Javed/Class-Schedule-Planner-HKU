@@ -114,6 +114,7 @@ def main():
 
         df = pd.read_excel(excel_file, skiprows=None)
         df.columns = df.columns.str[1:]
+        df['COURSE TITLE'] = df['COURSE TITLE'].str.lower()
         
         while True:
             degree = input("\n1. UG - Undergraduate\n2. TPG - Taught Postgraduate\n3. RPG - Research Postgraduate\n4. Exit\nPlease enter your degree: ")
@@ -165,7 +166,7 @@ def main():
                             if search == '-1':
                                 break
 
-                            search_result = course_list[course_list[search_mode_dict[int(search_mode)]].str.contains(search.upper())]
+                            search_result = course_list[course_list[search_mode_dict[int(search_mode)]].str.contains(search.lower())]
                             if search_result.empty:
                                 print("No course found.")
                             else:
