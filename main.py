@@ -42,7 +42,7 @@ def main():
 
         for index, row in course.iterrows():
 
-            if mode_dict[int(testmode)] == 'week' and (row['COURSE CODE'] + ' ' + row['CLASS SECTION']) in courses_added.values():
+            if mode_dict[int(testmode)] == 'week' and (row['COURSE CODE'] + ' ' + row['CLASS SECTION'] + ' ' + str([day_index[row[day]] for day in day_index.keys() if pd.notnull(row[day])][0])) in courses_added.values():
                 continue
 
             if add_sections == 'y' or row['CLASS SECTION'] in add_sections.upper().split(','):
@@ -54,6 +54,7 @@ def main():
                 title = row['COURSE TITLE']
                 description = row['VENUE']
                 section = row['CLASS SECTION']
+                days_difference = [day_index[row[day]] for day in day_index.keys() if pd.notnull(row[day])][0]
 
                 if mode_dict[int(testmode)] == 'week':
                     today = pd.Timestamp('today').date()
@@ -62,7 +63,7 @@ def main():
                     elif 'Sem 2' in row['ERM']:
                         start_date = today + timedelta(days=(14 - today.weekday()))  # Monday after next
 
-                    start_date = start_date + timedelta(days=[day_index[row[day]] for day in day_index.keys() if pd.notnull(row[day])][0])
+                    start_date = start_date + timedelta(days=days_difference)
                     
                 event = {
                     'summary': f'{title} {section if add_section_title[0].lower() == 'y' else ''}',
@@ -87,10 +88,10 @@ def main():
                     event['recurrence'] = [f'RRULE:FREQ=WEEKLY;UNTIL={(int(str(end_date).replace('-',''))+1)};BYDAY={[day[:2] for day in day_index.keys() if pd.notnull(row[day])][0]}',]
 
                 # Insert event to calendar
-                print(f"Adding {row['COURSE CODE']} {row['CLASS SECTION']} from {start_date} to {end_date if mode_dict[int(testmode)] == 'semester' else start_date} to your google calendar...")
+                print(f"Adding {row['COURSE CODE']} {row['CLASS SECTION']} from {start_date} to {end_date if mode_dict[int(testmode)] == 'semester' else start_date} ({[key for key, value in day_index.items() if value == days_difference][0]}) to your google calendar...")
                 event = service.events().insert(calendarId='primary', body=event).execute()
 
-                courses_added[event['id']] = row['COURSE CODE'] + ' ' + row['CLASS SECTION']
+                courses_added[event['id']] = row['COURSE CODE'] + ' ' + row['CLASS SECTION'] + ' ' + str(days_difference)
         
 
 
@@ -189,7 +190,7 @@ def main():
 
                         if clear[0].lower() == 'y':
                             for course_id in courses_added.keys():
-                                print(f"Deleting {course_id} {courses_added[course_id]} from your google calendar...")
+                                print(f"Deleting {course_id} {courses_added[course_id][:8]} from your google calendar...")
                                 service.events().delete(calendarId='primary', eventId=course_id).execute()
                             courses_added.clear()
 
