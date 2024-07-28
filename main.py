@@ -51,7 +51,8 @@ def main():
                 end_date = row['END DATE'].date()
                 start_time = row['START TIME']
                 end_time = row['END TIME']
-                title = row['COURSE TITLE']
+                code = row['COURSE CODE']
+                title = row['COURSE TITLE OG']
                 description = row['VENUE']
                 section = row['CLASS SECTION']
                 days_difference = [day_index[row[day]] for day in day_index.keys() if pd.notnull(row[day])][0]
@@ -66,7 +67,7 @@ def main():
                     start_date = start_date + timedelta(days=days_difference)
                     
                 event = {
-                    'summary': f'{title} {section if add_section_title[0].lower() == 'y' else ''}',
+                    'summary': f'{code} {title} {section if add_section_title[0].lower() == 'y' else ''}',
                     'description': f'{description}',
                     'start': {
                         'dateTime': f'{start_date}T{start_time}+08:00',
@@ -91,7 +92,7 @@ def main():
                 print(f"Adding {row['COURSE CODE']} {row['CLASS SECTION']} from {start_date} to {end_date if mode_dict[int(testmode)] == 'semester' else start_date} ({[key for key, value in day_index.items() if value == days_difference][0]}) to your google calendar...")
                 event = service.events().insert(calendarId='primary', body=event).execute()
 
-                courses_added[event['id']] = row['COURSE CODE'] + ' ' + row['CLASS SECTION'] + ' ' + str(days_difference)
+                courses_added[event['id']] = code + ' ' + section + ' ' + str(days_difference)
         
 
 
@@ -111,10 +112,6 @@ def main():
 
         # main program  
         print("Welcome to HKU Course Planner!")
-
-        df = pd.read_excel(excel_file, skiprows=None)
-        df.columns = df.columns.str[1:]
-        df['COURSE TITLE'] = df['COURSE TITLE'].str.lower()
         
         while True:
             degree = input("\n1. UG - Undergraduate\n2. TPG - Taught Postgraduate\n3. RPG - Research Postgraduate\n4. Exit\nPlease enter your degree: ")
@@ -126,7 +123,13 @@ def main():
                 break
 
             while degree != '4':
+
+                df = pd.read_excel(excel_file, skiprows=None)
+                df.columns = df.columns.str[1:]
+                df['COURSE TITLE OG'] = df['COURSE TITLE']
+                df['COURSE TITLE'] = df['COURSE TITLE'].str.lower()
                 course_list = df[df['ACAD_CAREER'].str.contains(degree_dict[int(degree)])]
+            
 
                 mode = input("\n1. One week\n2. Whole semester\n3. Go back\nDo you want to add courses for one week (for planning) or for the whole semester? ")
                 while not mode.isdigit() or int(mode) not in range(1, 4):
@@ -177,7 +180,19 @@ def main():
                                     addcourse = input("Invalid input. Please enter y or n: ")
 
                                 if addcourse[0].lower() == 'y':
-                                    addToCalender(search_result, mode)
+                                    if search_mode == '2' and search_result['COURSE CODE'].nunique() > 1:
+
+                                        for i, (code, title) in enumerate(zip(search_result['COURSE CODE'].unique(), search_result['COURSE TITLE'].unique()), 1):
+                                            print(f"{i}. {code} - {title}")
+
+                                        courses = input("Please enter the numbers of the courses you want to add (separated by commas): ")
+                                        while not all(course.isdigit() and int(course) <= search_result['COURSE TITLE'].nunique() for course in courses.split(',')):
+                                            courses = input(f"Invalid input. Please enter valid course number(s): ")
+
+                                        for courses in courses.split(','):
+                                            addToCalender(search_result[search_result['COURSE TITLE'] == search_result['COURSE TITLE'].unique()[int(courses)-1]], mode)    
+                                    else:                                  
+                                        addToCalender(search_result, mode)
 
                             add_more = input(f"Do you want to search for more courses by {search_mode_dict[int(search_mode)].lower()}? (y/n) ")
                             while add_more[0].lower() not in ['y', 'n']:
@@ -191,7 +206,7 @@ def main():
 
                         if clear[0].lower() == 'y':
                             for course_id in courses_added.keys():
-                                print(f"Deleting {course_id} {courses_added[course_id][:8]} from your google calendar...")
+                                print(f"Deleting {courses_added[course_id][:8]} from your google calendar...")
                                 service.events().delete(calendarId='primary', eventId=course_id).execute()
                             courses_added.clear()
 
