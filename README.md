@@ -15,5 +15,5 @@ This Python script helps HKU students add their courses to their Google Calendar
 4. Download the credentials.json file and place it in the same directory as the Python script.
 5. Run the script. It will guide you through the authentication process and create a token.json file to store your authentication credentials.
 ## Usage
-Run `main.py` to launch the program. Note that you can go back to previous question in any section by inputting `-1`.
+Run `main.py` to launch the program.
 
