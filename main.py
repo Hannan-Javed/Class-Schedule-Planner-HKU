@@ -206,7 +206,7 @@ def main():
 
                         if clear[0].lower() == 'y':
                             for course_id in courses_added.keys():
-                                print(f"Deleting {courses_added[course_id][:8]} from your google calendar...")
+                                print(f"Deleting {courses_added[course_id][:8]} {courses_added[course_id][9:11]} {[day for day,dif in day_index.items() if dif==int(courses_added[course_id][-1])][0]} from your google calendar...")
                                 service.events().delete(calendarId='primary', eventId=course_id).execute()
                             courses_added.clear()
 
