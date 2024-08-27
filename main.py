@@ -7,42 +7,46 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-
+from PyInquirer import prompt
 # global variables
 excel_file = '2024-25_class_timetable_20240722.xlsx'
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 pd.set_option('display.max_columns', None)
-degree_dict = {1: 'UG', 2: 'TPG', 3: 'RPG'}
-mode_dict = {1: 'week', 2: 'semester'}
-semester_dict = {1: 'Sem 1', 2: 'Sem 2'}
-search_mode_dict = {1: 'COURSE CODE', 2: 'COURSE TITLE'}
+degree_dict = {"UG - Undergraduate": 'UG', "TPG - Taught Postgraduate": 'TPG', "RPG - Research Postgraduate": 'RPG'}
+search_mode_dict = {"Course code": 'COURSE CODE', "Course title": 'COURSE TITLE'}
 courses_added = {}
 day_index = {'MON': 0, 'TUE': 1, 'WED': 2, 'THU': 3, 'FRI': 4}
 
 
 def main():
 
+    def listMenuSelector(field, qprompt, questions):
+        menu = prompt(
+                [
+                    {
+                        'type': 'list',
+                        'name': field,
+                        'message': qprompt,
+                        'choices': questions,
+                    }
+                ]
+            )
+        return menu[field]
+
     def addToCalender(course, testmode):
 
-
         if course['CLASS SECTION'].nunique() > 1:
-            add_sections = input("There are more than one section available for the chosen courses in this semester. Do you want to add all sections of the course? (y/n) ")
-            while add_sections[0].lower() not in ['y', 'n']:
-                add_sections = input("Invalid input. Please enter y or n: ")
-            if add_sections[0].lower() == 'n':
-                add_sections = input(f"{','.join(course['CLASS SECTION'].unique())}\nPlease enter the section(s) you want to add. If more than one section, then seperate with comma: ").upper()
-                while not all(section in course['CLASS SECTION'].unique() for section in add_sections.split(',')):
-                    add_sections = input(f"{','.join(course['CLASS SECTION'].unique())}\nInvalid section. Please enter a valid section: ").upper()
+            add_sections = input(f"There are more than one section of {course['COURSE TITLE OG'].unique()[0]}. Please enter the section(s) you want to add. Select multiple seperated by a comma {','.join(course['CLASS SECTION'].unique())}\nSections: ").upper()
+            while not all(section in course['CLASS SECTION'].unique() for section in add_sections.split(',')):
+                add_sections = input(f"{','.join(course['CLASS SECTION'].unique())}\nInvalid section. Please enter a valid section: ").upper()
         else:
             add_sections = 'y'
         
-        add_section_title = input("Do you want to add the section title together with the course title? (y/n) ")
-        while add_section_title[0].lower() not in ['y', 'n']:
-            add_section_title = input("Invalid input. Please enter y or n: ")
+        add_section_title = listMenuSelector('add_section_title', 'Do you want to add the section title together with the course title?', ['Yes', 'No'])
 
         for index, row in course.iterrows():
 
-            if mode_dict[int(testmode)] == 'week' and (row['COURSE CODE'] + ' ' + row['CLASS SECTION'] + ' ' + str([day_index[row[day]] for day in day_index.keys() if pd.notnull(row[day])][0])) in courses_added.values():
+            if testmode == 'One week' and (row['COURSE CODE'] + ' ' + row['CLASS SECTION'] + ' ' + str([day_index[row[day]] for day in day_index.keys() if pd.notnull(row[day])][0])) in courses_added.values():
                 continue
 
             if add_sections == 'y' or row['CLASS SECTION'] in add_sections.upper().split(','):
@@ -57,7 +61,7 @@ def main():
                 section = row['CLASS SECTION']
                 days_difference = [day_index[row[day]] for day in day_index.keys() if pd.notnull(row[day])][0]
 
-                if mode_dict[int(testmode)] == 'week':
+                if testmode == 'One week':
                     today = pd.Timestamp('today').date()
                     if 'Sem 1' in row['ERM']:
                         start_date = today + timedelta(days=(7 - today.weekday()))  # Next Monday
@@ -67,7 +71,7 @@ def main():
                     start_date = start_date + timedelta(days=days_difference)
                     
                 event = {
-                    'summary': f'{code} {title} {section if add_section_title[0].lower() == 'y' else ''}',
+                    'summary': f'{code} {title} {section if add_section_title == 'Yes' else ''}',
                     'description': f'{description}',
                     'start': {
                         'dateTime': f'{start_date}T{start_time}+08:00',
@@ -85,16 +89,15 @@ def main():
                         ],
                     },
                 }
-                if mode_dict[int(testmode)] == 'semester':
+                if testmode == 'Whole semester':
                     event['recurrence'] = [f'RRULE:FREQ=WEEKLY;UNTIL={(int(str(end_date).replace('-',''))+1)};BYDAY={[day[:2] for day in day_index.keys() if pd.notnull(row[day])][0]}',]
 
                 # Insert event to calendar
-                print(f"Adding {row['COURSE CODE']} {row['CLASS SECTION']} from {start_date} to {end_date if mode_dict[int(testmode)] == 'semester' else start_date} ({[key for key, value in day_index.items() if value == days_difference][0]}) to your google calendar...")
+                print(f"Adding {row['COURSE CODE']} {row['CLASS SECTION']} from {start_date} to {end_date if testmode == 'Whole semester' else start_date} ({[key for key, value in day_index.items() if value == days_difference][0]}) to your google calendar...")
                 event = service.events().insert(calendarId='primary', body=event).execute()
 
                 courses_added[event['id']] = code + ' ' + section + ' ' + str(days_difference)
-        
-
+    
 
     creds = None
     if os.path.exists('token.json'):
@@ -114,74 +117,59 @@ def main():
         print("Welcome to HKU Course Planner!")
         
         while True:
-            degree = input("\n1. UG - Undergraduate\n2. TPG - Taught Postgraduate\n3. RPG - Research Postgraduate\n4. Exit\nPlease enter your degree: ")
+            degree = listMenuSelector('degree', 'Please select your degree:', ['UG - Undergraduate', 'TPG - Taught Postgraduate', 'RPG - Research Postgraduate', 'Exit'])
 
-            while not degree.isdigit() or int(degree) not in range(1, 5):
-                degree = input("\n1. UG - Undergraduate\n2. TPG - Taught Postgraduate\n3. RPG - Research Postgraduate\n4. Exit\nInvalid input. Please select an option again: ")
-
-            if degree == '4':
+            if degree == 'Exit':
                 break
 
-            while degree != '4':
+            while degree != 'Exit':
 
                 df = pd.read_excel(excel_file, skiprows=None)
                 df.columns = df.columns.str[1:]
                 df['COURSE TITLE OG'] = df['COURSE TITLE']
                 df['COURSE TITLE'] = df['COURSE TITLE'].str.upper()
-                course_list = df[df['ACAD_CAREER'].str.contains(degree_dict[int(degree)])]
-            
-
-                mode = input("\n1. One week\n2. Whole semester\n3. Go back\nDo you want to add courses for one week (for planning) or for the whole semester? ")
-                while not mode.isdigit() or int(mode) not in range(1, 4):
-                    mode = input("\n1. One week\n2. Whole semester\n3. Go back\nInvalid input. Please select an option again: ")
-
-                if mode == '1':
+                course_list = df[df['ACAD_CAREER'].str.contains(degree_dict[degree])]
+                
+                mode = listMenuSelector('mode', 'Please select if you want to add courses for one week (for planning) or for the whole semester? ', ['One week', 'Whole semester', 'Go back'])
+                
+                if mode == 'One week':
                     print("In this mode, the semester 1 courses will be added to the nearest next week, and the semester 2 courses will be added to the week after the semester 1 courses.")
-                if mode == '3':
+                elif mode == 'Go back':
                     break                
 
-                while mode != '3':
+                while mode != 'Go back':
 
-                    semester = input("\n1. Sem 1\n2. Sem 2\n3. Go back\nPlease enter the semester: ")
-                    while not semester.isdigit() or int(semester) not in range(1, 4):
-                        semester = input("\n1. Sem 1\n2. Sem 2\n3. Go back\nInvalid input. Please select an option again: ")
+                    semester = listMenuSelector('semester', 'Please select the semester:', ['Sem 1', 'Sem 2', 'Go back'])
 
-                    if semester == '3':
+                    if semester == 'Go back':
                         break
 
-                    while semester != '3':
-                        course_list = course_list[course_list['ERM'].str.contains(semester_dict[int(semester)])]
+                    while semester != 'Go back':
+                        course_list = course_list[course_list['ERM'].str.contains(semester)]
 
-                        search_mode = input("\n1. Search by course code\n2. Search by course title\n3. Go back\nPlease enter searching field: ")
-                        while not search_mode.isdigit() or int(search_mode) not in range(1, 4):
-                            search_mode = input("\n1. Search by course code\n2. Search by course title\n3. Go back\nInvalid input. Please select an option again: ")
-
-                        if search_mode == '3':
+                        search_mode = listMenuSelector('search_mode', 'Please select the searching field:', ['Course code', 'Course title', 'Go back'])
+                        if search_mode == 'Go back':
                             break
 
                         search = ''
-                        while search_mode != '3' and search != '-1':
-                            search = input(f"Please enter the {search_mode_dict[int(search_mode)].lower()}: (-1 to go back) ")
+                        while search_mode != 'Go back' and search != '-1':
+                            search = input(f"Please enter the {search_mode.lower()}: (-1 to go back) ")
                             
-                            while search_mode == '1' and not re.match("[a-zA-Z]{4}[0-9]{4}", search) and search != '-1':
-                                search = input(f"Invalid course code format. Please enter the {search_mode_dict[int(search_mode)].lower()} again: (format is XXXXDDDD) ")
+                            while search_mode == "Course code" and not re.match("[a-zA-Z]{4}[0-9]{4}", search) and search != '-1':
+                                search = input(f"Invalid course code format. Please enter the course code again: (format is XXXXDDDD) ")
 
                             if search == '-1':
                                 break
 
-                            search_result = course_list[course_list[search_mode_dict[int(search_mode)]].str.contains(search.upper())]
+                            search_result = course_list[course_list[search_mode_dict[search_mode]].str.contains(search.upper())]
                             if search_result.empty:
                                 print("No course found.")
                             else:
                                 print(search_result)
-                                addcourse = input("Do you want to add the course to your google calendar? (y/n) ")
+                                addcourse = listMenuSelector('addcourse', 'Do you want to add the course to your google calendar?', ['Yes', 'No'])
 
-                                while addcourse[0].lower() not in ['y', 'n']:
-                                    addcourse = input("Invalid input. Please enter y or n: ")
-
-                                if addcourse[0].lower() == 'y':
-                                    if search_mode == '2' and search_result['COURSE CODE'].nunique() > 1:
-
+                                if addcourse == 'Yes':
+                                    if search_mode == 'Course title' and search_result['COURSE CODE'].nunique() > 1:
                                         for i, (code, title) in enumerate(zip(search_result['COURSE CODE'].unique(), search_result['COURSE TITLE'].unique()), 1):
                                             print(f"{i}. {code} - {title}")
 
@@ -194,17 +182,15 @@ def main():
                                     else:                                  
                                         addToCalender(search_result, mode)
 
-                            add_more = input(f"Do you want to search for more courses by {search_mode_dict[int(search_mode)].lower()}? (y/n) ")
-                            while add_more[0].lower() not in ['y', 'n']:
-                                add_more = input("Invalid input. Please enter y or n: ")
-                            if add_more[0].lower() == 'n':
-                                break
-                    if len(courses_added) > 0:
-                        clear = input("Do you want to clear all the entered events? (y/n) ")
-                        while clear[0].lower() not in ['y', 'n']:
-                            clear = input("Invalid input. Please enter y or n: ")
+                            add_more = listMenuSelector('add_more', f'Do you want to search for more courses by {search_mode.lower()}?', ['Yes', 'No'])
 
-                        if clear[0].lower() == 'y':
+                            if add_more == 'No':
+                                break
+
+                    if len(courses_added) > 0:
+                        clear = listMenuSelector('clear', 'Do you want to clear all the entered events?', ['Yes', 'No'])
+                
+                        if clear == 'Yes':
                             for course_id in courses_added.keys():
                                 print(f"Deleting {courses_added[course_id][:8]} {courses_added[course_id][9:11]} {[day for day,dif in day_index.items() if dif==int(courses_added[course_id][-1])][0]} from your google calendar...")
                                 service.events().delete(calendarId='primary', eventId=course_id).execute()
