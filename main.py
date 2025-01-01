@@ -132,14 +132,14 @@ def main():
                 )
                 process_add_to_calendar(calendar_manager, search_result, mode)
 
-                make_dir = list_menu_selector(
-                    'makedirectory',
-                    'Create a folder for the added courses?',
-                    ['Yes', 'No']
-                )
-                if make_dir == 'Yes':
-                    course = f"{search_result['COURSE CODE'].iloc[0]} - {search_result['COURSE TITLE OG'].iloc[0]}"
-                    directory_manager.make_directory(semester, course)
+            make_dir = list_menu_selector(
+                'makedirectory',
+                'Create a folder for the added courses?',
+                ['Yes', 'No']
+            )
+            if make_dir == 'Yes':
+                course = f"{search_result['COURSE CODE'].iloc[0]} - {search_result['COURSE TITLE OG'].iloc[0]}"
+                directory_manager.make_directory(semester, course)
 
             add_more = list_menu_selector(
                 'add_more',
