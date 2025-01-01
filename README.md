@@ -8,6 +8,7 @@ This Python script helps HKU students add their courses to their Google Calendar
 - **Calendar Integration**: Adds selected courses to the user's Google Calendar.
 - **Recurrence Options**: Allows users to choose between adding courses for one week (e.g. for seeing clashes) or the whole semester.
 - **Deletion**: Allow users to delete all entered courses in their google calendar.
+- **Make Course Directories**: Allow users to create directories for courses.
 ## Installation
 1. Clone the repository
     ```
