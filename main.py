@@ -17,6 +17,18 @@ search_mode_dict = {"Course code": 'COURSE CODE', "Course title": 'COURSE TITLE'
 courses_added = {}
 day_index = {'MON': 0, 'TUE': 1, 'WED': 2, 'THU': 3, 'FRI': 4}
 
+def get_default_download_directory():
+    home_directory = os.path.expanduser("~")  # Get user's home directory
+    
+    # Check the operating system to determine the download directory
+    if os.name == 'posix':  # Linux or macOS
+        download_directory = os.path.join(home_directory, 'Downloads')
+    elif os.name == 'nt':  # Windows
+        download_directory = os.path.join(home_directory, 'Downloads')
+    else:
+        download_directory = None  # Unsupported operating system
+    return download_directory
+
 
 def main():
 
@@ -98,6 +110,19 @@ def main():
 
                 courses_added[event['id']] = code + ' ' + section + ' ' + str(days_difference)
     
+    def makeDirectory(term, course):
+        choice = listMenuSelector('directory', 'Please select the directory to save the files:', ['Downloads', 'Input Directory Path'])
+        
+        if choice == 'Downloads':
+            directory = get_default_download_directory()
+        else:
+            directory = input("Please enter the directory path: ")
+            if not os.path.exists(directory):
+                print("The directory does not exist. Please try again.")
+                directory = input("Please enter the directory path: ")
+
+        directory = os.path.join(directory, term, course)
+        os.makedirs(directory, exist_ok=True)
 
     creds = None
     if os.path.exists('token.json'):
@@ -115,7 +140,7 @@ def main():
 
         # main program  
         print("Welcome to HKU Course Planner!")
-        
+
         while True:
             degree = listMenuSelector('degree', 'Please select your degree:', ['UG - Undergraduate', 'TPG - Taught Postgraduate', 'RPG - Research Postgraduate', 'Exit'])
 
@@ -182,6 +207,11 @@ def main():
                                     else:                                  
                                         addToCalender(search_result, mode)
 
+                                makedirectory = listMenuSelector('makedirectory', 'Do you want to make a folder for the courses added?', ['Yes', 'No'])
+
+                                if makedirectory == 'Yes':
+                                    course = f"{search_result['COURSE CODE'].unique()[0]} - {search_result['COURSE TITLE OG'].unique()[0]}"
+                                    makeDirectory(semester, course)
                             add_more = listMenuSelector('add_more', f'Do you want to search for more courses by {search_mode.lower()}?', ['Yes', 'No'])
 
                             if add_more == 'No':
