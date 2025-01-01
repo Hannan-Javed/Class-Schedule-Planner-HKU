@@ -1,5 +1,4 @@
 import pandas as pd
-import datetime as dt
 from datetime import timedelta
 import os.path, re
 from google.auth.transport.requests import Request
