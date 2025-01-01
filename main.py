@@ -1,12 +1,9 @@
 import re
-from datetime import timedelta
-from PyInquirer import prompt
 from excel_reader import ExcelReader
 from course import Course
 from calendar_manager import CalendarManager
 from directory_manager import DirectoryManager
 from utils import list_menu_selector, with_loading_animation
-import pandas as pd
 
 # Global variables
 EXCEL_FILE = '2024-25_class_timetable_20240722.xlsx'
