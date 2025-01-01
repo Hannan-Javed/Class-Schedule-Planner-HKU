@@ -17,7 +17,6 @@ search_mode_dict = {
     "Course title": 'COURSE TITLE'
 }
 courses_added = {}
-day_index = {'MON': 0, 'TUE': 1, 'WED': 2, 'THU': 3, 'FRI': 4}
 
 def add_to_calendar(calendar_manager, course_df, testmode):
     if course_df['CLASS SECTION'].nunique() > 1:
