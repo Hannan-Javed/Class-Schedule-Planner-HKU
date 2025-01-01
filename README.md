@@ -21,7 +21,7 @@ This Python script helps HKU students add their courses to their Google Calendar
 4. Create API credentials (OAuth 2.0 client ID) for your project.
 5. Download the credentials.json file and place it in the same directory as the Python script.
 6. Download the class schedule excel file through HKU Portal > SIS > Timetables > Class Timetable
-6. Run the script. It will guide you through the authentication process and create a token.json file to store your authentication credentials.
+7. Run the script. It will guide you through the authentication process and create a token.json file to store your authentication credentials.
 
 You can also refer to the guideline here for Google project setup:<br>
 https://www.youtube.com/watch?v=B2E82UPUnOY&t=463s
