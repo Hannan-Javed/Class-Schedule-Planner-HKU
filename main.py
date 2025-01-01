@@ -1,9 +1,13 @@
 import re
+from datetime import timedelta
+from PyInquirer import prompt
 from excel_reader import ExcelReader
+from course import Course
 from calendar_manager import CalendarManager
 from directory_manager import DirectoryManager
-from utils import list_menu_selector
-from course import Course
+from utils import list_menu_selector, with_loading_animation
+import pandas as pd
+
 # Global variables
 EXCEL_FILE = '2024-25_class_timetable_20240722.xlsx'
 degree_dict = {
@@ -16,6 +20,7 @@ search_mode_dict = {
     "Course title": 'COURSE TITLE'
 }
 courses_added = {}
+day_index = {'MON': 0, 'TUE': 1, 'WED': 2, 'THU': 3, 'FRI': 4}
 
 def add_to_calendar(calendar_manager, course_df, testmode):
     if course_df['CLASS SECTION'].nunique() > 1:
@@ -45,19 +50,32 @@ def add_to_calendar(calendar_manager, course_df, testmode):
         
         if add_sections == 'Y' or course.section in add_sections.split(','):
             event = course.create_event(testmode, add_section_title)
-            print(f"Adding {course.code} {course.section} to Google Calendar...")
             added_event = calendar_manager.add_event(event)
             if added_event:
                 courses_added[added_event['id']] = identifier
+
+@with_loading_animation("Reading Excel file")
+def read_courses(excel_reader):
+    return excel_reader.read_excel()
+
+@with_loading_animation("Adding courses to Google Calendar")
+def process_add_to_calendar(calendar_manager, course_df, testmode):
+    add_to_calendar(calendar_manager, course_df, testmode)
+
+@with_loading_animation("Deleting events from Google Calendar")
+def clear_events(calendar_manager):
+    for event_id, info in courses_added.items():
+        calendar_manager.delete_event(event_id)
+    courses_added.clear()
 
 def main():
     print("Welcome to HKU Course Planner!")
     excel_reader = ExcelReader(EXCEL_FILE)
     calendar_manager = CalendarManager()
     directory_manager = DirectoryManager()
+    complete_course_list = read_courses(excel_reader)
 
     while True:
-        complete_course_list = excel_reader.read_excel()
         degree = list_menu_selector(
             'degree',
             'Select your degree:',
@@ -115,7 +133,7 @@ def main():
                     'Select mode:',
                     ['One week', 'Whole semester']
                 )
-                add_to_calendar(calendar_manager, search_result, mode)
+                process_add_to_calendar(calendar_manager, search_result, mode)
 
                 make_dir = list_menu_selector(
                     'makedirectory',
@@ -141,10 +159,7 @@ def main():
                 ['Yes', 'No']
             )
             if clear == 'Yes':
-                for event_id, info in courses_added.items():
-                    print(f"Deleting {info} from Google Calendar...")
-                    calendar_manager.delete_event(event_id)
-                courses_added.clear()
+                clear_events(calendar_manager)
 
     print("Thank you for using HKU Course Planner!")
 
