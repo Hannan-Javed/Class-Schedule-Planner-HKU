@@ -4,6 +4,7 @@ from course import Course
 from calendar_manager import CalendarManager
 from directory_manager import DirectoryManager
 from utils import list_menu_selector, with_loading_animation
+from config import EXCEL_FILE
 
 degree_dict = {
     "UG - Undergraduate": 'UG',
