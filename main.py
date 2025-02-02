@@ -44,15 +44,6 @@ def add_to_calendar(calendar_manager, course_df, testmode):
             event = course.create_event(testmode, add_section_title)
             added_event = calendar_manager.add_event(event)
 
-
-@with_loading_animation("Reading Excel file")
-def read_courses(excel_reader):
-    return excel_reader.read_excel()
-
-@with_loading_animation("Adding courses to Google Calendar")
-def process_add_to_calendar(calendar_manager, course_df, testmode):
-    add_to_calendar(calendar_manager, course_df, testmode)
-
 @with_loading_animation("Deleting events from Google Calendar")
 def clear_events(calendar_manager):
     calendar_manager.clear_events()
@@ -62,7 +53,7 @@ def main():
     excel_reader = ExcelReader(EXCEL_FILE)
     calendar_manager = CalendarManager()
     directory_manager = DirectoryManager()
-    complete_course_list = read_courses(excel_reader)
+    complete_course_list = excel_reader.read_excel()
 
     while True:
         degree = list_menu_selector(

@@ -1,10 +1,12 @@
 import pandas as pd
+from utils import with_loading_animation
 
 class ExcelReader:
     def __init__(self, excel_file):
         self.excel_file = excel_file
         pd.set_option('display.max_columns', None)
 
+    @with_loading_animation("Reading Excel file")
     def read_excel(self):
         df = pd.read_excel(self.excel_file)
         df.columns = df.columns.str.strip()

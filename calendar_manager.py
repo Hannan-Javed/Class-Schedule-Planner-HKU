@@ -4,6 +4,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from utils import with_loading_animation
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
@@ -31,6 +32,7 @@ class CalendarManager:
             print("An error occurred: ", e)
             return None
 
+    @with_loading_animation("Adding courses to Google Calendar")
     def add_event(self, event):
         try:
             event = self.service.events().insert(calendarId='primary', body=event).execute()
