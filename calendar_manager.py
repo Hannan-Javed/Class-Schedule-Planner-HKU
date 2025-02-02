@@ -10,6 +10,7 @@ SCOPES = ["https://www.googleapis.com/auth/calendar"]
 class CalendarManager:
     def __init__(self):
         self.service = self.get_credentials()
+        self.events_added = []
 
     def get_credentials(self):
         creds = None
@@ -33,6 +34,7 @@ class CalendarManager:
     def add_event(self, event):
         try:
             event = self.service.events().insert(calendarId='primary', body=event).execute()
+            self.events_added.append(event['id'])
             return event
         except HttpError as e:
             print("Failed to add event:", e)
@@ -41,5 +43,11 @@ class CalendarManager:
     def delete_event(self, event_id):
         try:
             self.service.events().delete(calendarId='primary', eventId=event_id).execute()
+            self.events_added.remove(event_id)
         except HttpError as e:
             print("Failed to delete event:", e)
+
+    def clear_events(self):
+        for event_id in self.events_added:
+            self.delete_event(event_id)
+        self.events_added = []

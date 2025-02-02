@@ -15,7 +15,7 @@ search_mode_dict = {
     "Course code": 'COURSE CODE',
     "Course title": 'COURSE TITLE'
 }
-courses_added = {}
+
 
 def add_to_calendar(calendar_manager, course_df, testmode):
     if course_df['CLASS SECTION'].nunique() > 1:
@@ -40,14 +40,10 @@ def add_to_calendar(calendar_manager, course_df, testmode):
     for _, row in course_df.iterrows():
         course = Course(row)
         identifier = f"{course.code} {course.section} {course.days_difference}"
-        if testmode == 'One week' and identifier in courses_added.values():
-            continue
-        
         if add_sections == 'Y' or course.section in add_sections.split(','):
             event = course.create_event(testmode, add_section_title)
             added_event = calendar_manager.add_event(event)
-            if added_event:
-                courses_added[added_event['id']] = identifier
+
 
 @with_loading_animation("Reading Excel file")
 def read_courses(excel_reader):
@@ -59,9 +55,7 @@ def process_add_to_calendar(calendar_manager, course_df, testmode):
 
 @with_loading_animation("Deleting events from Google Calendar")
 def clear_events(calendar_manager):
-    for event_id, info in courses_added.items():
-        calendar_manager.delete_event(event_id)
-    courses_added.clear()
+    calendar_manager.clear_events()
 
 def main():
     print("Welcome to HKU Course Planner!")
@@ -147,7 +141,7 @@ def main():
             if add_more == 'No':
                 break
 
-        if courses_added:
+        if calendar_manager.events_added:
             clear = list_menu_selector(
                 'clear',
                 'Clear all entered events?',
