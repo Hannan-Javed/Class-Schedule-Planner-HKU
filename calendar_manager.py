@@ -45,11 +45,15 @@ class CalendarManager:
     def delete_event(self, event_id):
         try:
             self.service.events().delete(calendarId='primary', eventId=event_id).execute()
-            self.events_added.remove(event_id)
         except HttpError as e:
             print("Failed to delete event:", e)
 
+    @with_loading_animation("Clearing events from Google Calendar")
     def clear_events(self):
-        for event_id in self.events_added:
-            self.delete_event(event_id)
-        self.events_added = []
+        try:
+            print(self.events_added)
+            for event_id in self.events_added:
+                self.delete_event(event_id)
+            self.events_added = []
+        except HttpError as e:
+            print("Failed to delete event:", e)

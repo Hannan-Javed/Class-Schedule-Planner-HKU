@@ -1,1 +1,1 @@
-EXCEL_FILE = '2024-25_class_timetable_20240722.xlsx'
+EXCEL_FILENAME = '2024-25_class_timetable_20240722.xlsx'

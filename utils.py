@@ -1,19 +1,18 @@
-import sys
-import time
-import threading
+import sys, time, threading
 from PyInquirer import prompt
 from functools import wraps
+from course import Course
 
-def list_menu_selector(field, prompt_message, choices):
+def list_menu_selector(prompt_message, choices):
     menu = prompt([
         {
             'type': 'list',
-            'name': field,
+            'name': 'choice',
             'message': prompt_message,
             'choices': choices,
         }
     ])
-    return menu.get(field, None)
+    return menu['choice']
 
 def loading_animation(message, stop_event):
     while not stop_event.is_set():
@@ -43,3 +42,24 @@ def with_loading_animation(message):
             return result
         return wrapper
     return decorator
+
+@with_loading_animation("Making courses list")
+def make_course_objects(course_list):
+    courses = []
+    grouped = course_list.groupby(["TERM", "COURSE CODE"])
+    for _, group in grouped:
+        course_obj = Course(group)
+        courses.append(course_obj)
+
+    return courses
+
+def select_courses(courses):
+    courses_to_add = input(f"Enter courses to add (comma-separated): ").split(',')
+    while any(int(course_num)<1 or int(course_num)>len(courses) for course_num in courses_to_add):
+        courses_to_add = input(f"Invalid courses. Please enter valid courses: ").split(',')
+    s = []
+    for course_num in courses_to_add:
+        s.append(courses[int(course_num)-1])
+
+    return s
+        

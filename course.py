@@ -4,51 +4,114 @@ import pandas as pd
 day_index = {'MON': 0, 'TUE': 1, 'WED': 2, 'THU': 3, 'FRI': 4}
 
 class Course:
-    def __init__(self, row):
-        self.start_date = row['START DATE'].date()
-        self.end_date = row['END DATE'].date()
-        self.code = row['COURSE CODE']
-        self.title = row['COURSE TITLE OG']
-        self.section = row['CLASS SECTION']
-        self.description = row['VENUE']
-        self.day = [day[:2] for day in day_index if pd.notnull(row[day])][0]
-        self.days_difference = day_index[[day for day in day_index if pd.notnull(row[day])][0]]
-        self.term = row['TERM']
-        self.start_time = row['START TIME']
-        self.end_time = row['END TIME']
+
+    def __init__(self, group_df):
+        self.code = group_df.iloc[0]['COURSE CODE']
+        self.title = group_df.iloc[0]['COURSE TITLE']
+        self.term = group_df.iloc[0]['TERM']
+        self.degree = group_df.iloc[0]['ACAD_CAREER']
+        
+        self.sections = {}
+        grouped = group_df.groupby(['CLASS SECTION', 'VENUE'])
+        for (section, venue), sub_df in grouped:
+            schedule_list = []
+            for _, row in sub_df.iterrows():
+                schedule = {
+                    'start_date': row['START DATE'].date(),
+                    'end_date': row['END DATE'].date()
+                }
+                # Each row should only have one valid day column.
+                day_found = next((day for day in day_index if pd.notnull(row[day])), None)
+                if day_found:
+                    schedule[day_found] = {
+                        'start_time': row['START TIME'],
+                        'end_time': row['END TIME']
+                    }
+                
+                schedule_list.append(schedule)
+            
+            self.sections[section] = {
+                'venue': venue,
+                'schedules': schedule_list
+            }
+
+    def select_sections(self):
+        sections = list(self.sections.keys())
+        if len(sections) == 1:
+            return sections
+        sections_to_add = input(
+            f"There are multiple sections for {self.code}: {self.title}. "
+            f"Enter sections to add (comma-separated): {', '.join(sections)}\nSections: "
+        ).upper()
+        while not all(section in sections for section in sections_to_add.split(',')):
+            sections_to_add = input(
+                f"Invalid sections. Please enter valid sections: {', '.join(sections)}\nSections: "
+            ).upper()
+        
+        return [section for section in self.sections if section in sections_to_add.split(',')]
     
-    def create_event(self, testmode, add_section_title):
-        start_date = self.start_date
-        if testmode == 'One week':
+    def convert_to_calendar_event(self,section_name, add_section_title, testmode, schedule_num):
+        
+        if section_name is None:
+            section_name = next(iter(self.sections))
+
+        section = self.sections[section_name]
+        
+        schedule = section['schedules'][schedule_num]
+        start_date = schedule['start_date']
+        
+        day, time = list(schedule.items())[2]
+        
+        # Adjust start_date if in "One week" (test) mode.
+        if testmode:
             today = pd.Timestamp('today').date()
-            if 'Sem 1' in self.term:
-                # add to next week
-                start_date = today + timedelta(days=(7 - today.weekday()))
-            elif 'Sem 2' in self.term:
-                # add to next next week
-                start_date = today + timedelta(days=(14 - today.weekday()))
-            start_date += timedelta(days=self.days_difference)
+            start_date = today + timedelta(days=(7 + (7 if 'Sem 2' in self.term else 0) - today.weekday()))
+            start_date += timedelta(days=day_index.get(day, 0))
+        
+        summary = f"{self.code}{(' - ' + section_name) if len(self.sections) > 1 else ''}{(' - ' + self.title) if add_section_title else ''}"
         
         event = {
-            'summary': f"{self.code} {self.title} {(' ' + self.section) if add_section_title == 'Yes' else ''}",
-            'description': self.description,
+            'summary': summary,
+            'description': section['venue'],
             'start': {
-                'dateTime': f"{start_date}T{self.start_time}+08:00",
-                'timeZone': 'Asia/Hong_Kong',
+                'dateTime': f"{start_date}T{time['start_time']}+08:00",
+                'timeZone': 'Asia/Hong_Kong'
             },
             'end': {
-                'dateTime': f"{start_date}T{self.end_time}+08:00",
-                'timeZone': 'Asia/Hong_Kong',
+                'dateTime': f"{start_date}T{time['end_time']}+08:00",
+                'timeZone': 'Asia/Hong_Kong'
             },
             'colorId': 7,
             'reminders': {
                 'useDefault': False,
-                'overrides': [],
-            },
+                'overrides': []
+            }
         }
         
-        if testmode == 'Whole semester':
-            until = int(str(self.end_date).replace('-', '')) + 1
-            event['recurrence'] = [f"RRULE:FREQ=WEEKLY;UNTIL={until};BYDAY={self.day[:2]}"]
-        
+        # For whole semester mode, add recurrence based on end_date.
+        if not testmode:
+            until = int(str(schedule['end_date']).replace('-', '')) + 1
+            event['recurrence'] = [f"RRULE:FREQ=WEEKLY;UNTIL={until};BYDAY={day[:2]}"]
         return event
+
+# Structure of the course data
+# Build a dictionary of sections
+# sections = {
+#   section1: {
+#       'venue': <venue>,
+#       'schedules': [
+#           {
+#               'start_date': s1, 
+#               'end_date': e1,
+#                'MON': {'start_time': t1, 'end_time': t1_end},
+#           },
+#           {
+#               'start_date': s2,
+#               'end_date': e2,
+#                'TUE': {'start_time': t2, 'end_time': t2_end},
+#           },
+#          ...
+#       ],
+#   },
+#   section2: { ... }
+# }

@@ -1,10 +1,8 @@
 import re
 from excel_reader import ExcelReader
-from course import Course
 from calendar_manager import CalendarManager
 from directory_manager import DirectoryManager
-from utils import list_menu_selector, with_loading_animation
-from config import EXCEL_FILE
+from utils import list_menu_selector, select_courses, make_course_objects
 
 degree_dict = {
     "UG - Undergraduate": 'UG',
@@ -12,52 +10,27 @@ degree_dict = {
     "RPG - Research Postgraduate": 'RPG'
 }
 search_mode_dict = {
-    "Course code": 'COURSE CODE',
-    "Course title": 'COURSE TITLE'
+    "Course code": 'code',
+    "Course title": 'title'
 }
-
-
-def add_to_calendar(calendar_manager, course_df, testmode):
-    if course_df['CLASS SECTION'].nunique() > 1:
-        sections = course_df['CLASS SECTION'].unique()
-        add_sections = input(
-            f"There are multiple sections for {course_df['COURSE TITLE OG'].iloc[0]}. "
-            f"Enter sections to add (comma-separated): {', '.join(sections)}\nSections: "
-        ).upper()
-        while not all(section in sections for section in add_sections.split(',')):
-            add_sections = input(
-                f"Invalid sections. Please enter valid sections: {', '.join(sections)}\nSections: "
-            ).upper()
-    else:
-        add_sections = 'Y'
-    
-    add_section_title = list_menu_selector(
-        'add_section_title',
-        'Add section title to course title?',
-        ['Yes', 'No']
-    )
-
-    for _, row in course_df.iterrows():
-        course = Course(row)
-        identifier = f"{course.code} {course.section} {course.days_difference}"
-        if add_sections == 'Y' or course.section in add_sections.split(','):
-            event = course.create_event(testmode, add_section_title)
-            added_event = calendar_manager.add_event(event)
-
-@with_loading_animation("Deleting events from Google Calendar")
-def clear_events(calendar_manager):
-    calendar_manager.clear_events()
 
 def main():
     print("Welcome to HKU Course Planner!")
-    excel_reader = ExcelReader(EXCEL_FILE)
+    excel_reader = ExcelReader()
+    # Read the Excel data as a DataFrame.
+    complete_course_list = excel_reader.read_excel()
+    
+    # Group rows by TERM and COURSE CODE.
+    # Each group is aggregated within the Course constructor.
+    courses = make_course_objects(complete_course_list)
+    
     calendar_manager = CalendarManager()
     directory_manager = DirectoryManager()
-    complete_course_list = excel_reader.read_excel()
 
     while True:
+        current_courses = []
+
         degree = list_menu_selector(
-            'degree',
             'Select your degree:',
             list(degree_dict.keys()) + ['Exit']
         )
@@ -65,24 +38,20 @@ def main():
         if degree == 'Exit':
             break
 
-        course_list = complete_course_list[
-            complete_course_list['ACAD_CAREER'].str.contains(degree_dict[degree])
-        ]
+        current_courses = [course for course in courses if course.degree == degree_dict[degree]]
         semester = list_menu_selector(
-            'semester',
             'Select the semester:',
             ['Sem 1', 'Sem 2', 'Go back']
         )
-
         if semester == 'Go back':
             continue
-        course_list = course_list[course_list['TERM'].str.contains(semester)]
+        
+        current_courses = [course for course in current_courses if semester in course.term]
+        
         search_mode = list_menu_selector(
-            'search_mode',
             'Select the search field:',
             list(search_mode_dict.keys()) + ['Go back']
         )
-
         if search_mode == 'Go back':
             continue
 
@@ -90,42 +59,60 @@ def main():
             search = input(f"Enter the {search_mode.lower()} (-1 to go back): ")
             if search == '-1':
                 break
-            if search_mode == "Course code" and not re.match("[a-zA-Z]{4}[0-9]{4}", search):
+
+            if search_mode == "Course code" and not re.match("[A-Za-z]{4}[0-9]{4}", search):
                 print("Invalid course code format. Please try again.")
                 continue
 
-            search_result = course_list[
-                course_list[search_mode_dict[search_mode]].str.contains(search.upper())
-            ]
-            if search_result.empty:
-                print("No course found.")
+            search_result = [course for course in current_courses if search.upper() in getattr(course, search_mode_dict[search_mode]).upper()]
+
+            if not search_result:
+                print("No courses found. Please try again.")
                 continue
 
-            print(search_result)
+            for i, course in enumerate(search_result):
+                print(f"{i + 1}. {course.code} - {course.title}")
+
             add_course = list_menu_selector(
-                'addcourse',
-                'Add this course to your Google Calendar?',
+                'Do you want to add this course to your google calendar?' if len(search_result) == 1 else 'Do you want to add any of these courses to your google calendar?',
                 ['Yes', 'No']
             )
             if add_course == 'Yes':
-                mode = list_menu_selector(
-                    'mode',
+                search_result = select_courses(search_result) if len(search_result) > 1 else search_result
+
+                add_course_title = (list_menu_selector(
+                        'Do you want to add the course name in the event title?',
+                        ['Yes', 'No']
+                ) == "Yes") if locals().get('add_course_title') is None else add_course_title
+                
+                is_test_mode = list_menu_selector(
                     'Select mode:',
                     ['One week', 'Whole semester']
-                )
-                process_add_to_calendar(calendar_manager, search_result, mode)
+                ) == 'One week'
+                
+                for course in search_result:
+                    sections = course.select_sections()
+                    for section in sections:
+                        if is_test_mode:
+                            days_time_added = {}
+                        for schedule_number, schedule in enumerate(course.sections[section]['schedules']):
+                            if is_test_mode:
+                                day = list(schedule.keys())[2]
+                                if day in days_time_added.keys() and schedule[day] == days_time_added[day]:
+                                    continue
+                            calendar_manager.add_event(course.convert_to_calendar_event(section, add_course_title, is_test_mode, schedule_number))
+                            if is_test_mode:
+                                days_time_added[day] = schedule[day]
 
-            make_dir = list_menu_selector(
-                'makedirectory',
-                'Create a folder for the added courses?',
-                ['Yes', 'No']
-            )
-            if make_dir == 'Yes':
-                course = f"{search_result['COURSE CODE'].iloc[0]} - {search_result['COURSE TITLE OG'].iloc[0]}"
-                directory_manager.make_directory(semester, course)
+                make_dir = list_menu_selector(
+                    'Create a folder for the course?' if len(search_result) == 1 else 'Create folders for the courses?',
+                    ['Yes', 'No']
+                )
+                if make_dir == 'Yes':
+                    for course in search_result:
+                        directory_manager.make_directory(course.term, course.code + ((' - ' + course.title) if add_course_title else '')) 
 
             add_more = list_menu_selector(
-                'add_more',
                 f"Search more courses by {search_mode.lower()}?",
                 ['Yes', 'No']
             )
@@ -134,12 +121,11 @@ def main():
 
         if calendar_manager.events_added:
             clear = list_menu_selector(
-                'clear',
                 'Clear all entered events?',
                 ['Yes', 'No']
             )
             if clear == 'Yes':
-                clear_events(calendar_manager)
+                calendar_manager.clear_events()
 
     print("Thank you for using HKU Course Planner!")
 

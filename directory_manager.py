@@ -11,7 +11,7 @@ class DirectoryManager:
 
     def make_directory(self, term, course):
         if not self.directory:
-            choice = list_menu_selector('directory', 'Please select the directory to save the files:', ['Downloads', 'Input Directory Path'])
+            choice = list_menu_selector('Please select the directory to save the files:', ['Downloads', 'Input Directory Path'])
             self.directory = self.get_default_download_directory() if choice == 'Downloads' else self.prompt_directory()
         dir = os.path.join(self.directory, term, course)
         os.makedirs(dir, exist_ok=True)
