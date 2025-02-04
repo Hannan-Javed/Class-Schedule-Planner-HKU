@@ -51,7 +51,6 @@ class CalendarManager:
     @with_loading_animation("Clearing events from Google Calendar")
     def clear_events(self):
         try:
-            print(self.events_added)
             for event_id in self.events_added:
                 self.delete_event(event_id)
             self.events_added = []
