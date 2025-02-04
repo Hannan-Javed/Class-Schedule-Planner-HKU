@@ -15,13 +15,13 @@ def list_menu_selector(prompt_message, choices):
     return menu['choice']
 
 def loading_animation(message, stop_event):
+    spinner = ['|', '/', '-', '\\']
+    idx = 0
     while not stop_event.is_set():
-        for dots in range(4):  # 0 to 3 dots
-            sys.stdout.write("\r" + message + " " * 4)
-            sys.stdout.flush()
-            sys.stdout.write("\r" + message + "." * dots)
-            sys.stdout.flush()
-            time.sleep(0.5)
+        sys.stdout.write("\r" + message + " " + spinner[idx])
+        sys.stdout.flush()
+        idx = (idx + 1) % len(spinner)
+        time.sleep(0.1)
     print()
 
 def with_loading_animation(message):
