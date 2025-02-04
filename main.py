@@ -91,7 +91,11 @@ def main():
                 ) == 'One week'
                 
                 for course in search_result:
-                    sections = course.select_sections()
+                    if len(list(course.sections.keys())) > 0:
+                        sections = course.select_sections()
+                    else:
+                        print("This course has no sections. Skipping")
+                        continue
                     for section in sections:
                         if is_test_mode:
                             days_time_added = {}
