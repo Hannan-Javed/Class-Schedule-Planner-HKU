@@ -123,13 +123,13 @@ def main():
             if add_more == 'No':
                 break
 
-        if calendar_manager.events_added:
-            clear = list_menu_selector(
-                'Clear all entered events?',
-                ['Yes', 'No']
-            )
-            if clear == 'Yes':
-                calendar_manager.clear_events()
+    if calendar_manager.events_added:
+        clear = list_menu_selector(
+            'Clear all entered events?',
+            ['Yes', 'No']
+        )
+        if clear == 'Yes':
+            calendar_manager.clear_events()
 
     print("Thank you for using HKU Course Planner!")
 
