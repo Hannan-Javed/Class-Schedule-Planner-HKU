@@ -1,4 +1,5 @@
-import re
+import _pickle as pickle
+import re, os
 from excel_reader import ExcelReader
 from calendar_manager import CalendarManager
 from directory_manager import DirectoryManager
@@ -17,12 +18,16 @@ search_mode_dict = {
 def main():
     print("Welcome to HKU Course Planner!")
     excel_reader = ExcelReader()
-    # Read the Excel data as a DataFrame.
-    complete_course_list = excel_reader.read_excel()
-    
-    # Group rows by TERM and COURSE CODE.
-    # Each group is aggregated within the Course constructor.
-    courses = make_course_objects(complete_course_list)
+    if not os.path.exists('courses.pkl'):
+        
+        complete_course_list = excel_reader.read_excel()
+        
+        courses = make_course_objects(complete_course_list)
+        with open('courses.pkl', 'wb') as f:
+            pickle.dump(courses, f)
+    else:
+        with open('courses.pkl', 'rb') as f:
+            courses = pickle.load(f)
     
     calendar_manager = CalendarManager()
     directory_manager = DirectoryManager()
