@@ -3,6 +3,7 @@ import re, os
 from excel_reader import ExcelReader
 from calendar_manager import CalendarManager
 from directory_manager import DirectoryManager
+from config import EXCEL_FILENAME
 from utils import list_menu_selector, select_courses, make_course_objects
 
 degree_dict = {
@@ -18,15 +19,15 @@ search_mode_dict = {
 def main():
     print("Welcome to HKU Course Planner!")
     excel_reader = ExcelReader()
-    if not os.path.exists('courses.pkl'):
+    if not os.path.exists(f'{EXCEL_FILENAME}.pkl'):
         
         complete_course_list = excel_reader.read_excel()
         
         courses = make_course_objects(complete_course_list)
-        with open('courses.pkl', 'wb') as f:
+        with open(f'{EXCEL_FILENAME}.pkl', 'wb') as f:
             pickle.dump(courses, f)
     else:
-        with open('courses.pkl', 'rb') as f:
+        with open(f'{EXCEL_FILENAME}.pkl', 'rb') as f:
             courses = pickle.load(f)
     
     calendar_manager = CalendarManager()
