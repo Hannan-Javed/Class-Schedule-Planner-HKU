@@ -27,4 +27,5 @@ This Python script helps HKU students add their courses to their Google Calendar
 You can also refer to the guideline here for Google project setup:<br>
 https://www.youtube.com/watch?v=B2E82UPUnOY&t=463s
 ## Usage
-Run `main.py` to launch the program.<br>
+- Change excel filename in `config.py` to the one downloaded
+- Run `main.py`
