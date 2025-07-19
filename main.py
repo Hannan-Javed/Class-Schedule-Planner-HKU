@@ -117,7 +117,7 @@ def main():
                 make_dir = list_menu_selector(
                     'Create a folder for the course?' if len(search_result) == 1 else 'Create folders for the courses?',
                     ['Yes', 'No']
-                ) if locals().get('add_course_title') is None else make_dir
+                ) if locals().get('make_dir') is None else make_dir
                 if make_dir == 'Yes':
                     for course in search_result:
                         directory_manager.make_directory(course.term, course.code + ((' - ' + course.title) if add_course_title else '')) 
