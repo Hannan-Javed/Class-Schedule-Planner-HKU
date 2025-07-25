@@ -12,11 +12,12 @@ class Course:
         self.degree = group_df.iloc[0]['ACAD_CAREER']
         
         self.sections = {}
-        grouped = group_df.groupby(['CLASS SECTION', 'VENUE'])
-        for (section, venue), sub_df in grouped:
+        grouped = group_df.groupby(['CLASS SECTION'])
+        for section, sub_df in grouped:
             schedule_list = []
             for _, row in sub_df.iterrows():
                 schedule = {
+                    'venue': row['VENUE'],
                     'start_date': row['START DATE'].date(),
                     'end_date': row['END DATE'].date()
                 }
@@ -30,10 +31,7 @@ class Course:
                 
                 schedule_list.append(schedule)
             
-            self.sections[section] = {
-                'venue': venue,
-                'schedules': schedule_list
-            }
+            self.sections[section[0]] = schedule_list
 
     def select_sections(self):
         sections = list(self.sections.keys())
@@ -57,10 +55,10 @@ class Course:
 
         section = self.sections[section_name]
         
-        schedule = section['schedules'][schedule_num]
+        schedule = section[schedule_num]
         start_date = schedule['start_date']
         
-        day, time = list(schedule.items())[2]
+        day, time = list(schedule.items())[3]
         
         # Adjust start_date if in "One week" (test) mode.
         if testmode:
@@ -72,7 +70,7 @@ class Course:
         
         event = {
             'summary': summary,
-            'description': section['venue'],
+            'description': schedule['venue'],
             'start': {
                 'dateTime': f"{start_date}T{time['start_time']}+08:00",
                 'timeZone': 'Asia/Hong_Kong'
@@ -94,24 +92,25 @@ class Course:
             event['recurrence'] = [f"RRULE:FREQ=WEEKLY;UNTIL={until};BYDAY={day[:2]}"]
         return event
 
+
 # Structure of the course data
 # Build a dictionary of sections
 # sections = {
-#   section1: {
-#       'venue': <venue>,
-#       'schedules': [
-#           {
-#               'start_date': s1, 
-#               'end_date': e1,
-#                'MON': {'start_time': t1, 'end_time': t1_end},
-#           },
-#           {
-#               'start_date': s2,
-#               'end_date': e2,
-#                'TUE': {'start_time': t2, 'end_time': t2_end},
-#           },
-#          ...
-#       ],
+#   section1: [
+#               {
+#                   'venue': <venue>,
+#                   'start_date': s1, 
+#                   'end_date': e1,
+#                   'MON': {'start_time': t1, 'end_time': t1_end},
+#               },
+#               {
+#                   'venue': <venue>,
+#                   'start_date': s2,
+#                   'end_date': e2,
+#                   'TUE': {'start_time': t2, 'end_time': t2_end},
+#               },
+#               ...
+#             ],
 #   },
 #   section2: { ... }
 # }

@@ -105,9 +105,10 @@ def main():
                     for section in sections:
                         if is_test_mode:
                             days_time_added = {}
-                        for schedule_number, schedule in enumerate(course.sections[section]['schedules']):
+                        for schedule_number, schedule in enumerate(course.sections[section]):
                             if is_test_mode:
-                                day = list(schedule.keys())[2]
+                                print(course.sections[section])
+                                day = list(schedule.keys())[3]
                                 if day in days_time_added.keys() and schedule[day] == days_time_added[day]:
                                     continue
                             calendar_manager.add_event(course.convert_to_calendar_event(section, add_course_title, is_test_mode, schedule_number))
