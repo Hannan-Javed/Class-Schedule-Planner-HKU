@@ -107,7 +107,6 @@ def main():
                             days_time_added = {}
                         for schedule_number, schedule in enumerate(course.sections[section]):
                             if is_test_mode:
-                                print(course.sections[section])
                                 day = list(schedule.keys())[3]
                                 if day in days_time_added.keys() and schedule[day] == days_time_added[day]:
                                     continue
