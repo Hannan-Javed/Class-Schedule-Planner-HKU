@@ -2,6 +2,7 @@ from datetime import timedelta
 import pandas as pd
 
 day_index = {'MON': 0, 'TUE': 1, 'WED': 2, 'THU': 3, 'FRI': 4}
+days_in_month = {1: 31, 2: 28, 3: 31, 4: 30, 5: 31, 6: 30, 7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31}
 
 class Course:
 
@@ -88,10 +89,27 @@ class Course:
         
         # For whole semester mode, add recurrence based on end_date.
         if not testmode:
-            until = int(str(schedule['end_date']).replace('-', '')) + 1
+            end_date = schedule['end_date']
+            year, month, day_ = end_date.year, end_date.month, end_date.day
+
+            # Check for leap year
+            if month == 2 and ((year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)):
+                max_day = 29
+            else:
+                max_day = days_in_month[month]
+
+            # Increment day by 1, adjust month/year if needed
+            day_ += 1
+            if day_ > max_day:
+                day_ = 1
+                month += 1
+                if month > 12:
+                    month = 1
+                    year += 1
+
+            until = f"{year}{month:02d}{day_:02d}"
             event['recurrence'] = [f"RRULE:FREQ=WEEKLY;UNTIL={until};BYDAY={day[:2]}"]
         return event
-
 
 # Structure of the course data
 # Build a dictionary of sections
