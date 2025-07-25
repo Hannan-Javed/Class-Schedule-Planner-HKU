@@ -104,15 +104,16 @@ def main():
                         continue
                     for section in sections:
                         if is_test_mode:
-                            days_time_added = {}
+                            days_time_added = set()
                         for schedule_number, schedule in enumerate(course.sections[section]):
                             if is_test_mode:
                                 day = list(schedule.keys())[3]
-                                if day in days_time_added.keys() and schedule[day] == days_time_added[day]:
+                                day_time_tuple = (day, schedule[day]['start_time'], schedule[day]['end_time'])
+                                if day_time_tuple in days_time_added:
                                     continue
                             calendar_manager.add_event(course.convert_to_calendar_event(section, add_course_title, is_test_mode, schedule_number))
                             if is_test_mode:
-                                days_time_added[day] = schedule[day]
+                                days_time_added.add(day_time_tuple)
 
                 make_dir = list_menu_selector(
                     'Create a folder for the course?' if len(search_result) == 1 else 'Create folders for the courses?',
