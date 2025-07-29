@@ -1,18 +1,18 @@
 import sys, time, threading
-from PyInquirer import prompt
+import inquirer
 from functools import wraps
 from course import Course
 
 def list_menu_selector(prompt_message, choices):
-    menu = prompt([
-        {
-            'type': 'list',
-            'name': 'choice',
-            'message': prompt_message,
-            'choices': choices,
-        }
-    ])
-    return menu['choice']
+    questions = [
+                    inquirer.List('choice',
+                        message=prompt_message,
+                        choices=choices,
+                        carousel=True
+                    ),
+                ]
+    answer = inquirer.prompt(questions)
+    return answer['choice']
 
 def loading_animation(message, stop_event):
     spinner = ['|', '/', '-', '\\']
