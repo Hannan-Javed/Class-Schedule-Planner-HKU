@@ -40,7 +40,7 @@ class Course:
             return sections
         sections_to_add = input(
             f"There are multiple sections for {self.code}: {self.title}. "
-            f"Enter sections to add (comma-separated): {', '.join(sections)}\nSections: "
+            f"Enter sections to add (comma-separated): {','.join(sections)}\nSections: "
         ).upper()
         while not all(section in sections for section in sections_to_add.split(',')):
             sections_to_add = input(
